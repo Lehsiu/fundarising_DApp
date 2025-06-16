@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>鏈上捐款平台 - 連接錢包</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body>
+  <header>
+    鏈上捐款平台 | ChainDonation
+  </header>
+
+ 
+
+  <div class="container">
+    <h1>Step1 連接你的錢包</h1>
+    <p>請先連接你的 MetaMask 錢包，我們將取得你在鏈上的地址。</p>
+    
+    <button id="connectBtn">連接 MetaMask</button>
+    
+    <div id="walletInfo" style="margin-top: 20px; display: none;">
+      <strong>已連接地址：</strong>
+      <p id="walletAddress" style="color: #00ffff; word-break: break-word;"></p>
+    </div>
+  </div>
+
+
+
+<div class="container">
+  <h1>Step2 選擇您的身份</h1>
+  <div class="role-selector">
+    <button class="role-card" onclick="ensureWalletAndNavigate('upload-project.html')">
+      <i class="fas fa-building fa-3x"></i>
+      <h2>我是企業端</h2>
+      <p>我想要上傳募資專案</p>
+    </button>
+    <button class="role-card" onclick="ensureWalletAndNavigate('donation.html')">
+      <i class="fas fa-hand-holding-heart fa-3x"></i>
+       <h2>我是捐款者</h2>
+      <p>我想要捐款給值得信賴的專案</p>
+    </button>
+  </div>
+</div>
+ <script>
+  window.account = null;
+
+  function ensureWalletAndNavigate(targetPage) {
+    if (!window.account) {
+      alert("請先連接 MetaMask 錢包");
+      return;
+    }
+    window.location.href = targetPage;
+  }
+</script>
+  <script>
+    window.addEventListener('load', async () => {
+      if (typeof window.ethereum === 'undefined') {
+        alert("請安裝 MetaMask 擴充套件以使用本平台。");
+        return;
+      }
+
+      const connectBtn = document.getElementById('connectBtn');
+      const walletInfo = document.getElementById('walletInfo');
+      const walletAddress = document.getElementById('walletAddress');
+
+      connectBtn.addEventListener('click', async () => {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          window.account = accounts[0];
+
+          walletInfo.style.display = 'block';
+          walletAddress.textContent = window.account;
+
+          // 驗證是否為Sepolia 測試鏈
+          const web3 = new Web3(window.ethereum);
+          const networkId = await web3.eth.net.getId();
+          console.log('當前網路 ID:', networkId);
+
+          // Sepolia 測試鏈的 chain ID 是 11155111
+          if (networkId !== 11155111) {
+            alert('請切換至支援的鏈 (chain ID 11155111)');
+          }
+
+        } catch (error) {
+          console.error('連接失敗:', error);
+          alert('連接錢包時發生錯誤。');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

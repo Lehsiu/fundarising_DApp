@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>企業端 - 上傳收據</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body>
+  <header>
+    <style>
+.pretty-btn {
+  background: linear-gradient(90deg, #2c2c2c 0%, #2c2c2c 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 2rem;
+  margin: 12px 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 16px #00ffff44, 0 0 0 #0072ff00;
+  letter-spacing: 1px;
+  transition: 
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s,
+    color 0.2s;
+  outline: none;
+}
+
+.pretty-btn:hover, .pretty-btn:focus {
+  background: linear-gradient(90deg, #00ffff 0%, #00ffff 100%);
+  color: #000000;
+  box-shadow: 0 4px 24px #1752527c, 0 0 8px #0072ff55;
+  transform: translateY(-2px) scale(1.04);
+  border: 1.5px solid #00ffff;
+}
+</style>
+    企業端專區｜上傳收據
+  </header>
+  <button onclick="window.location.href='index.html'" class="pretty-btn">回首頁</button>
+  <button onclick="window.location.href='enterprise-project.html'" class="pretty-btn">專案列表</button>
+  <div class="container">
+    <h2>為專案上傳收據</h2>
+    <p>請上傳收據檔案，並確認網址中含有正確的專案 ID。</p>
+
+    <input type="file" id="receiptFile" accept="image/*,.pdf" />
+    <button onclick="handleUpload()">上傳收據</button>
+  </div>
+
+  <script>
+
+
+
+  function getProjectIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (!id) {
+      alert("找不到專案 ID，請確認網址中有 ?id=...");
+      throw new Error("Missing projectId in URL");
+    }
+    return parseInt(id);
+  }
+
+  async function handleUpload() {
+  const fileInput = document.getElementById('receiptFile');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("請選擇要上傳的收據檔案");
+    return;
+  }
+
+  try {
+    const cid = await window.uploadToIPFS(file);
+    console.log('IPFS CID:', cid);
+
+    const projectId = getProjectIdFromUrl();
+    await window.connectWallet();
+
+    // 這裡直接傳 CID 給 uploadReceipt
+    await window.uploadReceipt(projectId, cid);
+    window.location.href = `result.html?projectId=${projectId}`;
+  } catch (err) {
+    console.error(err);
+    alert("上傳失敗，請檢查錢包或區塊鏈狀態");
+  }
+}
+  </script>
+</body>
+</html>

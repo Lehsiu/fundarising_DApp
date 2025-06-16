@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>募款端專區｜捐款專案</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="js/app.js"></script>
+</head>
+
+<body>
+  <header>
+    <style>
+.pretty-btn {
+  background: linear-gradient(90deg, #2c2c2c 0%, #2c2c2c 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 2rem;
+  margin: 12px 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 16px #00ffff44, 0 0 0 #0072ff00;
+  letter-spacing: 1px;
+  transition: 
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s,
+    color 0.2s;
+  outline: none;
+}
+
+.pretty-btn:hover, .pretty-btn:focus {
+  background: linear-gradient(90deg, #00ffff 0%, #00ffff 100%);
+  color: #000000;
+  box-shadow: 0 4px 24px #1752527c, 0 0 8px #0072ff55;
+  transform: translateY(-2px) scale(1.04);
+  border: 1.5px solid #00ffff;
+}
+</style>
+    <h2 style="text-align: center; color: cyan;">捐款專案詳情 | ChainDonation</h2>
+  </header>
+  <button onclick="window.location.href='index.html'" class="pretty-btn">回首頁</button>
+  <main style="text-align: center; margin-top: 40px;">
+    <form id="donateForm">
+    <div class="container" id="projectListContainer">
+      <h3>已上傳的專案</h3>
+    <div id="projectList"></div>
+    </div>
+    </form>
+    
+  </main>
+  <style>
+
+  .container, .card {
+  text-align: left;
+}
+</style>
+
+  <script>
+    
+
+    async function getProjectCount(contract){
+      let count = 0;
+      while (true){
+        try{
+          await contract.methods.projects(count).call();
+          count++;
+        } catch (e) {
+          break
+        }
+      }
+      return count;
+    }
+    async function renderProjectsOnChain(){
+      if(!window.ethereum) return;
+      const contract = window.contract;
+      const projectList = document.getElementById('projectList');
+      const projectListContainer = document.getElementById('projectListContainer');
+      projectList.innerHTML = '';
+
+    let count = await getProjectCount(contract);
+
+      if(count === 0){
+        projectListContainer.style.display = 'none';
+        return;
+      }
+      projectListContainer.style.display = 'block';
+      for(let idx = 0; idx<count; idx++){
+        const p = await contract.methods.projects(idx).call();
+        const ethAmount = window.web3.utils.fromWei(p.goalAmount, 'ether');
+        const percent = p.goalAmount > 0 ?(p.amountRaised / p.goalAmount * 100).toFixed(2) : 0;
+        const uploaded = await contract.methods.isReceiptUploaded(idx).call();
+
+         const receiptHtml = uploaded
+      ? `<div style="margin-top: 20px; color: lightgreen;">✅ 已上傳收據，感謝支持！</div>`
+      : `<div style="margin-top: 20px; color: orange;">❌ 尚未上傳收據，請留意後續更新。</div>`;
+
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+      <h4>${p.title}</h4>
+      <p><strong>目標金額：</strong> ${ethAmount} ETH</p>
+      <p><strong>使用目的：</strong><br>${p.purpose}</p>
+      <p><strong>募資金額達標後預計</strong> ${p.receiptDeadlineDays}<strong>日內上傳</strong></p>
+      <div class="progress-container">
+        <div class="progress-bar" style="width: ${percent}%;"></div>
+      </div>
+      <p><em>目前募資進度：${percent}%</em></p>
+      ${receiptHtml}
+      <div style="margin-top:10px;">
+      <input type="number" min="0.001" step="0.001" placeholder="捐款金額(ETH)" id="donateAmount-${idx}" style="width:120px;">
+      <button class="pretty-btn" onclick="donateToProject(${idx})">我要捐款</button>
+    </div>
+    <p><a href="upload-receipt.html?id=${idx}">前往上傳收據</a></p>
+  `;
+      projectList.appendChild(card);
+      }
+    }
+    
+    function getProjectIdFromUrl(){
+      const params = new URLSearchParams(window.location.search);
+      return params.has('projectId') ? parseInt(params.get('projectId'), 10) : 0;
+    }
+    const projectId = getProjectIdFromUrl();
+
+    window.addEventListener('DOMContentLoaded', async () => {
+     
+      await window.connectWallet();
+
+      console.log("合約地址",window.CONTRACT_ADDRESS);
+      console.log("網路", await window.web3.eth.net.getId())
+      
+      await renderProjectsOnChain();
+      loadReceiptStatus();
+    });
+
+    window.donateToProject = async function(idx) {
+  await window.connectWallet();
+  const input = document.getElementById(`donateAmount-${idx}`);
+  const amount = parseFloat(input.value);
+  if (isNaN(amount) || amount <= 0) {
+    alert("請輸入正確金額");
+    return;
+  }
+  try {
+    await window.contract.methods.donate(idx).send({
+      from: window.account,
+      value: window.web3.utils.toWei(amount.toString(), 'ether'),
+    });
+    alert("捐款成功！感謝您的支持！");
+    input.value = '';
+    await renderProjectsOnChain();
+  } catch (err) {
+    console.error("捐款錯誤：", err);
+    alert("捐款過程中發生錯誤");
+  }
+}
+    document.getElementById('donateForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      await window.connectWallet();
+      
+      const amount = parseFloat(document.getElementById('donationAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        alert("請輸入正確金額");
+        return;
+      }
+
+      try {
+        await window.contract.methods.donate(projectId).send({
+          from: window.account,
+          value: window.web3.utils.toWei(amount.toString(), 'ether'),
+        });
+        alert("捐款成功！感謝您的支持！");
+        loadReceiptStatus(); // 更新收據狀態顯示
+      } catch (err) {
+        console.error("捐款錯誤：", err);
+        alert("捐款過程中發生錯誤");
+      }
+    });
+  
+     async function loadReceiptStatus() {
+    if (!window.ethereum) return;
+
+    const uploaded = await window.contract.methods.isReceiptUploaded(projectId).call();
+
+    document.getElementById('receiptInfo').style.display = uploaded ? 'block' : 'none';
+    document.getElementById('receiptMissing').style.display = uploaded ? 'none' : 'block';
+  }
+  </script>
+</body>
+</html>
