@@ -1,5 +1,7 @@
 
 import Head from 'next/head';
+import Link from 'next/link';
+import '../css/style.css';
 
 export default function Home() {
   return (
@@ -20,13 +22,4 @@ export default function Home() {
   );
 }
 
-const linkStyle = {
-  display: 'inline-block',
-  padding: '1rem 2rem',
-  margin: '1rem',
-  backgroundColor: '#00ffff',
-  color: '#000',
-  fontWeight: 'bold',
-  textDecoration: 'none',
-  borderRadius: '8px'
-};
+
