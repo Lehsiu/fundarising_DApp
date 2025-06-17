@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>企業端 - 上傳募資專案</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body>
+  <header>
+     <style>
+.pretty-btn {
+  background: linear-gradient(90deg, #2c2c2c 0%, #2c2c2c 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 2rem;
+  margin: 12px 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 16px #00ffff44, 0 0 0 #0072ff00;
+  letter-spacing: 1px;
+  transition: 
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s,
+    color 0.2s;
+  outline: none;
+}
+
+.pretty-btn:hover, .pretty-btn:focus {
+  background: linear-gradient(90deg, #00ffff 0%, #00ffff 100%);
+  color: #000000;
+  box-shadow: 0 4px 24px #1752527c, 0 0 8px #0072ff55;
+  transform: translateY(-2px) scale(1.04);
+  border: 1.5px solid #00ffff;
+}
+</style>
+    企業端專區｜上傳募資專案
+  </header>
+  <button onclick="window.location.href='index.html'" class="pretty-btn">回首頁</button>
+  <button onclick="window.location.href='enterprise-project.html'" class="pretty-btn">專案列表</button>
+  <div class="container">
+    <h2>填寫募資專案資訊</h2>
+
+    <form id="projectForm">
+      <label>專案標題</label>
+      <input type="text" id="title" required />
+
+      <label>目標金額（ETH）</label>
+      <input type="number" id="goalAmount" step="0.0001" min="0.001" required />
+
+      <label>使用目的</label>
+      <textarea id="purpose" rows="4" required></textarea>
+
+      <label>募資天數</label>
+      <input type="number" id="durationDays" min="1" max="30" required />
+
+      <label>預計收據上傳時間</label>
+      <input type="number" id="receiptTime" min="1" max="7" required />
+
+      <input type="submit" value="提交專案" />
+    </form>
+  </div>
+
+  <div class="container" id="projectListContainer" style="display:none;">
+    <h3>已上傳的專案</h3>
+    <div id="projectList"></div>
+  </div>
+  <script>
+    const form = document.getElementById('projectForm');
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      await window.connectWallet();
+
+      const title = document.getElementById('title').value.trim();
+      const goalAmount = parseFloat(document.getElementById('goalAmount').value);
+      const purpose = document.getElementById('purpose').value.trim();
+      const durationDays = parseInt(document.getElementById('durationDays').value, 10);
+      const durationSeconds = durationDays * 24 * 60 * 60;
+      const receiptTime = parseInt(document.getElementById('receiptTime').value, 10);
+
+      if (!title || !purpose || !receiptTime || isNaN(goalAmount) || goalAmount <= 0) {
+        alert('請正確填寫所有欄位');
+        return;
+      }
+
+       try {
+      await window.contract.methods.createProject(
+        title,
+        purpose,
+        window.web3.utils.toWei(goalAmount.toString(), 'ether'),
+        durationSeconds,
+        receiptTime
+      ).send({ from: window.account });
+
+      alert('專案已成功上鏈！');
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      alert('上傳失敗，請檢查錢包或區塊鏈狀態');
+    }
+  });
+  </script>
+</body>
+</html>
