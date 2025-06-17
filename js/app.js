@@ -383,10 +383,12 @@ window.contract = null;
 window.connectWallet = async function(){
   if (window.ethereum) {
      try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      window.account = accounts[0];
-      window.web3 = new Web3(window.ethereum);
-      window.contract = new window.web3.eth.Contract(window.CONTRACT_ABI, window.CONTRACT_ADDRESS);
+     if (!window.account) {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            window.account = accounts[0];
+            window.web3 = new Web3(window.ethereum);
+            window.contract = new window.web3.eth.Contract(window.CONTRACT_ABI, window.CONTRACT_ADDRESS);
+            }
       return window.account;
     } catch (err) {
       console.error("錢包連接失敗：", err);
@@ -400,37 +402,54 @@ window.connectWallet = async function(){
 
 // 呼叫此函式以建立一個募資專案（由企業端呼叫）
 window.createProject = async function(title, goalAmount, purpose, durationSeconds, receiptTime) {
-  await window.connectWallet();
-  await window.contract.methods.createProject(
-    title,
-    purpose,
-    window.web3.utils.toWei(goalAmount.toString(), 'ether'),
-    durationSeconds,
-    receiptTime
-  ).send({ from: window.account });
+try {
+        await window.connectWallet();
+        await window.contract.methods.createProject(
+            title,
+            purpose,
+            window.web3.utils.toWei(goalAmount.toString(), 'ether'),
+            durationSeconds,
+            receiptTime
+        ).send({ from: window.account });
+        alert("專案建立成功！");
+} catch (err) {
+        console.error("建立專案失敗：", err);
+        alert("建立專案失敗");
+}
 };
 
 window.donateToProject = async function(projectId, amountInEth) {
-  await window.connectWallet();
-  await window.contract.methods.donate(projectId)
-    .send({ from: window.account, value: window.web3.utils.toWei(amountInEth.toString(), 'ether') });
-};
+ try {
+        await window.connectWallet();
+        await window.contract.methods.donate(projectId)
+            .send({ from: window.account, value: window.web3.utils.toWei(amountInEth.toString(), 'ether') });
+        alert("捐款成功！");
+} catch (err) {
+        console.error("捐款失敗：", err);
+        alert("捐款失敗");
+}};
 
 window.uploadToIPFS = async function(file) {
-  const url = "https://8f4a-2001-b011-1-13bf-f927-eb0b-901d-8a16.ngrok-free.app "; 
-  const formData = new FormData();
-  formData.append("file", file);
+try {
+        const url = process.env.IPFS_API_URL;
+        if (!url) throw new Error("IPFS Proxy URL 未設定");
+        const formData = new FormData();
+        formData.append("file", file);
 
-  const res = await fetch(url, {
-    method: "POST",
-    body: formData
-  });
+        const res = await fetch(url, {
+            method: "POST",
+            body: formData
+        });
 
-  if (!res.ok) {
-    throw new Error("Proxy 上傳失敗");
-  }
-  const data = await res.json();
-  return data.IpfsHash;
+        if (!res.ok) {
+            throw new Error("Proxy 上傳失敗");
+        }
+        const data = await res.json();
+        return data.IpfsHash;
+} catch (err) {
+        console.error("IPFS 上傳錯誤：", err);
+        throw err;
+}
 };
 
 window.uploadReceipt = async function(projectId, receiptUrl) {
